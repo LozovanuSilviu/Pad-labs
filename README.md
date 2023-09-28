@@ -29,6 +29,7 @@
 - **Gateway:** JS, NestJs framework
 - **Inventory Service:** .NET, MongoDB. 
 - **Renting Service Service:** .NET , MongoDB.
+- **Kafka** Communication between services
 
 ## Design Data Management
 
