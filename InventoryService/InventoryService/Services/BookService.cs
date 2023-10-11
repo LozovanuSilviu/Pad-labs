@@ -119,4 +119,26 @@ public class BookService
              throw new Exception("Something went wrong. Details:" + $"{e.Message}");
          }
      }
+     
+     public async Task<HealthStatus> GetHealthStatus(BookService service)
+     {
+         var connected = _dbContext.Database.CanConnect();
+         bool serviceInitialized = !service.Equals(null);
+         var status = new HealthStatus()
+         {
+             database = "disconnected",
+             ready = false
+         };
+         if (connected && serviceInitialized)
+         {
+             status.database = "connected";
+             status.ready = true;
+         }
+         else if (connected && !serviceInitialized)
+         {
+             status.ready = false;
+         }
+
+         return status;
+     }
 }

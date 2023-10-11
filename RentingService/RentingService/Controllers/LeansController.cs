@@ -11,10 +11,12 @@ namespace RentingService.Controllers;
 public class LeanController
 {
     private readonly LeanService _leanService;
+    private readonly AppDbContext _dbContext;
 
     public LeanController(LeanService leanService,AppDbContext dbContext)
     {
         _leanService = leanService;
+        _dbContext = dbContext;
     }
     
 
@@ -73,9 +75,13 @@ public class LeanController
         var response =await _leanService.GetReservations();
         return await Task.FromResult(response);
     }
-    
-    
-    
-    
+
+    [HttpGet]
+    [Route("health")]
+    public async Task<HealthStatus> HealthStatus()
+    {
+        var health =await _leanService.GetHealthStatus(_leanService);
+        return health;
+    }
     
 }

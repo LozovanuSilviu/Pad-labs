@@ -7,6 +7,7 @@ builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql("Host=localhost;Database=Renting;Username=postgres;Password=postgres;"));
+
 builder.Services.AddScoped<LeanService>();
 
 var app = builder.Build();

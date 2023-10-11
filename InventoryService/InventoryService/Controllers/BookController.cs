@@ -57,5 +57,13 @@ public class BookController
         var response =await _bookService.UpdateInfo(operationType,id);
         return response;
     }
+    
+    [HttpGet]
+    [Route("updateInfo/flag={operationType}/{id}")]
+    public async Task<HealthStatus> GetHealthStatus(BookEdit operationType, Guid id )
+    {
+        var response =await _bookService.GetHealthStatus(_bookService);
+        return response;
+    }
 
 }

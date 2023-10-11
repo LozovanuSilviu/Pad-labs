@@ -76,4 +76,26 @@ public class LeanService
         var reservations =_dbContext.Reservations.AsQueryable();
         return await Task.FromResult(reservations);
     }
+    
+    public async Task<HealthStatus> GetHealthStatus(LeanService service)
+    {
+        var connected = _dbContext.Database.CanConnect();
+        bool serviceInitialized = !service.Equals(null);
+        var status = new HealthStatus()
+        {
+            database = "disconnected",
+            ready = false
+        };
+        if (connected && serviceInitialized)
+        {
+            status.database = "connected";
+            status.ready = true;
+        }
+        else if (connected && !serviceInitialized)
+        {
+            status.ready = false;
+        }
+
+        return status;
+    }
 }
