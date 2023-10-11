@@ -73,15 +73,16 @@
    * Response Message: `{ "Successfully canceled reservation"}` 
 
   > `Post close-lease` 
-   * Request Message: `{ "reservationId": guid,}`
+   * Request Message: `{ "leaseId": guid,}`
    * Response Message: `{ "Successfully ended lease"}` 
 
   > `Get search-leases/{customerName}` 
-   * Response Message: `[{"reservationId": guid, "lean-start-date": DateTime, "returnDate": DateTime}]`
+   * Response Message: `[{"leaseId": guid, "bookId": guid, "lean-start-date": DateTime, "returnDate": DateTime, "customerName": string}]`
 
   > `Get all-leases` 
-   * Response Message: `[{"reservationId": guid, "lean-start-date": DateTime, "returnDate": DateTime}]`
-  
+   * Response Message: `[{"leaseId": guid,"bookId":guid, "lean-start-date": DateTime, "returnDate": DateTime, "customerName": string}]`
+  > `Get all-reservations`
+   * Response Message: `[{"reservationId": guid, "bookId":guid, "reservedUntil": DateTime, "customerName": string}]`
   
 
 ## Deployment and Scaling 

@@ -1,0 +1,15 @@
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace RentingService.Data.Entities;
+
+[Table("Renting", Schema = "rentings")]
+public class Rent
+{ 
+    [Key]
+    public Guid leaseId { get; set; }
+    public DateTime leaseStartDate { get; set; }
+    public DateTime returnDate { get; set; }
+    public Guid bookId { get; set; }
+    public string customerName { get; set; }
+}
