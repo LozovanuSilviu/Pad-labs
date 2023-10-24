@@ -6,7 +6,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddSwaggerGen();
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseNpgsql("Host=localhost;Database=Inventory;Username=postgres;Password=postgres;"));
+    options.UseNpgsql("Host=my_postgres;Port=5432;Database=inventory_pad_lab;Username=postgres;Password=postgres;"));
 builder.Services.AddScoped<BookService>();
 
 var app = builder.Build();

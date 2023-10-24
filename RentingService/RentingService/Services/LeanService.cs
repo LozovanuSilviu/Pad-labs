@@ -81,6 +81,7 @@ public class LeanService
     {
         var connected = _dbContext.Database.CanConnect();
         bool serviceInitialized = !service.Equals(null);
+        Console.WriteLine(serviceInitialized+"here"+connected);
         var status = new HealthStatus()
         {
             database = "disconnected",

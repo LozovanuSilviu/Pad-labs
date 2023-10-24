@@ -11,7 +11,6 @@
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Microsoft.CodeAnalysis.dll
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Microsoft.CodeAnalysis.CSharp.dll
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Microsoft.CodeAnalysis.Razor.dll
-/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Microsoft.DotNet.PlatformAbstractions.dll
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Microsoft.EntityFrameworkCore.dll
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Microsoft.EntityFrameworkCore.Abstractions.dll
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Microsoft.EntityFrameworkCore.Relational.dll
@@ -50,3 +49,10 @@
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/obj/Debug/net6.0/RentingService.pdb
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/obj/Debug/net6.0/RentingService.genruntimeconfig.cache
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/obj/Debug/net6.0/ref/RentingService.dll
+/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Humanizer.dll
+/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Microsoft.EntityFrameworkCore.Design.dll
+/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/Mono.TextTemplating.dll
+/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/System.CodeDom.dll
+/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/System.Text.Encodings.Web.dll
+/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/System.Text.Json.dll
+/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/runtimes/browser/lib/net6.0/System.Text.Encodings.Web.dll

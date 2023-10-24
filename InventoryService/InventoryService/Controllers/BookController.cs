@@ -21,8 +21,8 @@ public class BookController
     [HttpPost]
     [Route("add-book")]
     public async Task<string> AddBook(AddBookModel newBook)
-    {
-        var response =await _bookService.AddBook(newBook);
+    { 
+        await _bookService.AddBook(newBook);
         return "Succesfully added";
     } 
     
