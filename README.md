@@ -35,7 +35,7 @@
 
 1. **Inventory Service**
   > `Get health `
-  * Response Body/Message: `{"ready":bool, "database": string{"connected" / "disconnected"}, "load" bool}`
+  * Response Body/Message: `{"ready":bool, "database": string{"connected" / "disconnected"}}`
 
 > `Get search/{criteria}`
   * Response Body/Message: `[{"bookId":guid, "bookName": string,"bookAuthor": string "availableCount": int,"reservedCount": int}]`
@@ -58,7 +58,7 @@
     
 2. **Renting Service** 
   > `Get health `
-   * Response Body/Message: `{"ready":bool, "database": string{"connected" / "disconnected"}, "load" bool}`
+   * Response Body/Message: `{"ready":bool, "database": string{"connected" / "disconnected"}}`
 
   > `Post reserve`  
    * Request Message: `{ "bookId": guid, "customerName": string}`
