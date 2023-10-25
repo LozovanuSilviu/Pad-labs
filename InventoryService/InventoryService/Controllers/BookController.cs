@@ -1,5 +1,4 @@
 using InventoryService.Data;
-using InventoryService.Data.Entities;
 using InventoryService.Enums;
 using InventoryService.Models;
 using InventoryService.Services;
@@ -9,7 +8,7 @@ namespace InventoryService.Controllers;
 
 [ApiController]
 [Route("api")]
-public class BookController
+public class BookController : ControllerBase
 {
     private readonly BookService _bookService;
 
@@ -20,50 +19,123 @@ public class BookController
 
     [HttpPost]
     [Route("add-book")]
-    public async Task<string> AddBook(AddBookModel newBook)
-    { 
-        await _bookService.AddBook(newBook);
-        return "Succesfully added";
+    public async Task<IActionResult> AddBook(AddBookModel newBook)
+    {
+        var addBookTask = Task.Run(() => _bookService.AddBook(newBook));
+        
+        var completedTask = await Task.WhenAny(addBookTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == addBookTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await addBookTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     } 
     
     [HttpGet]
     [Route("search/{criteria}")]
-    public async Task<List<Book>> SearchBook(string criteria)
+    public async Task<IActionResult> SearchBook(string criteria)
     {
-        var response =await _bookService.SearchBook(criteria);
-        return response;
+        var searchBookTask =Task.Run(() =>_bookService.SearchBook(criteria));
+        var completedTask = await Task.WhenAny(searchBookTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == searchBookTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await searchBookTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     } 
     
     [HttpGet]
     [Route("get-all-books")]
-    public async Task<List<Book>> GetAllBooks()
+    public async Task<IActionResult> GetAllBooks()
     {
-        var response =await _bookService.GetAllBooks();
-        return response;
+        var getAllBooksTask =Task.Run(() => _bookService.GetAllBooks());
+        var completedTask = await Task.WhenAny(getAllBooksTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == getAllBooksTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await getAllBooksTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
     [HttpDelete]
     [Route("remove-book")]
-    public async Task<string> RemoveBook(BaseModel book)
+    public async Task<IActionResult> RemoveBook(BaseModel book)
     {
-        var response =await _bookService.RemoveBook(book);
-        return response;
+        var removeBookTask =Task.Run(() =>_bookService.RemoveBook(book));
+        var completedTask = await Task.WhenAny(removeBookTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == removeBookTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await removeBookTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }  
     
     [HttpPut]
     [Route("updateInfo/flag={operationType}/{id}")]
-    public async Task<Book> UpdateBookInfo(BookEdit operationType, Guid id )
+    public async Task<IActionResult> UpdateBookInfo(BookEdit operationType, Guid id )
     {
-        var response =await _bookService.UpdateInfo(operationType,id);
-        return response;
+        var updateBookInfoTask =Task.Run(() =>_bookService.UpdateInfo(operationType,id));
+        var completedTask = await Task.WhenAny(updateBookInfoTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == updateBookInfoTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await updateBookInfoTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
     [HttpGet]
-    [Route("updateInfo/flag={operationType}/{id}")]
-    public async Task<HealthStatus> GetHealthStatus(BookEdit operationType, Guid id )
+    [Route("health")]
+    public async Task<IActionResult> GetHealthStatus(BookEdit operationType, Guid id )
     {
-        var response =await _bookService.GetHealthStatus(_bookService);
-        return response;
+        var getHealthStatusTask =Task.Run(() =>_bookService.GetHealthStatus(_bookService));
+        var completedTask = await Task.WhenAny(getHealthStatusTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == getHealthStatusTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await getHealthStatusTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
 
 }

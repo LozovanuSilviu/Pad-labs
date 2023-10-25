@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
 using RentingService.Data;
-using RentingService.Data.Entities;
 using RentingService.Models;
 using RentingService.Services;
 
@@ -8,7 +7,7 @@ namespace RentingService.Controllers;
 
 [ApiController]
 [Route("api")]
-public class LeanController
+public class LeanController : ControllerBase
 {
     private readonly LeanService _leanService;
     private readonly AppDbContext _dbContext;
@@ -22,66 +21,162 @@ public class LeanController
 
     [HttpPost]
     [Route("lease")]
-    public async Task<DateTime> AddLean(NewRent rent)
+    public async Task<IActionResult> AddLean(NewRent rent)
     {
-        var response =await _leanService.AddRent(rent);
-        return await Task.FromResult(response);
+        var addLeaseTask =Task.Run(() =>_leanService.AddRent(rent));
+        var completedTask = await Task.WhenAny(addLeaseTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == addLeaseTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await addLeaseTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
     [HttpPost]
     [Route("resere")]
-    public async Task<DateTime> AddReservation(NewReservation reservation)
+    public async Task<IActionResult> AddReservation(NewReservation reservation)
     {
-        var response =await _leanService.AddReservation(reservation);
-        return await Task.FromResult(response);
+        var addReservationTask =Task.Run(() =>_leanService.AddReservation(reservation));
+        var completedTask = await Task.WhenAny(addReservationTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == addReservationTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await addReservationTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
     [HttpPost]
     [Route("cancel-reservation")]
-    public async Task<string> CancelReservation(BaseReservationModel reservation)
+    public async Task<IActionResult> CancelReservation(BaseReservationModel reservation)
     {
-        var response =await _leanService.RemoveReservation(reservation);
-        return await Task.FromResult(response);
+        var cancelReservationTask =Task.Run(() =>_leanService.RemoveReservation(reservation));
+        var completedTask = await Task.WhenAny(cancelReservationTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == cancelReservationTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await cancelReservationTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
     [HttpPost]
     [Route("close-lease")]
-    public async Task<string> CloseLease(BaseRentModel renting)
+    public async Task<IActionResult> CloseLease(BaseRentModel renting)
     {
-        var response =await _leanService.CloseLease(renting);
-        return await Task.FromResult(response);
+        var closeLeaseTask =Task.Run(() =>_leanService.CloseLease(renting));
+        var completedTask = await Task.WhenAny(closeLeaseTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == closeLeaseTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await closeLeaseTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
     [HttpGet]
     [Route("search-leases/{customerName}")]
-    public async Task<IQueryable<Rent>> SearchLease(string customerName)
+    public async Task<IActionResult> SearchLease(string customerName)
     {
-        var response =await _leanService.SearchLease(customerName);
-        return await Task.FromResult(response);
+        var searchLeaseTask =Task.Run(() =>_leanService.SearchLease(customerName));
+        var completedTask = await Task.WhenAny(searchLeaseTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == searchLeaseTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await searchLeaseTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
     [HttpGet]
     [Route("all-leases")]
-    public async Task<IQueryable<Rent>> GetLeases()
+    public async Task<IActionResult> GetLeases()
     {
-        var response =await _leanService.GetLeases();
-        return await Task.FromResult(response);
+        var getLeasesTask =Task.Run(() =>_leanService.GetLeases());
+        var completedTask = await Task.WhenAny(getLeasesTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == getLeasesTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await getLeasesTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
     [HttpGet]
     [Route("all-reservations")]
-    public async Task<IQueryable<Reservation>> GetReservations()
+    public async Task<IActionResult> GetReservations()
     {
-        var response =await _leanService.GetReservations();
-        return await Task.FromResult(response);
+        var getReservationTask =Task.Run(() =>_leanService.GetReservations());
+        var completedTask = await Task.WhenAny(getReservationTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == getReservationTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await getReservationTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
 
     [HttpGet]
     [Route("health")]
-    public async Task<HealthStatus> HealthStatus()
+    public async Task<IActionResult> HealthStatus()
     {
-        var health =await _leanService.GetHealthStatus(_leanService);
-        return health;
+        var getHealthStatusTask =Task.Run(() =>_leanService.GetHealthStatus(_leanService));
+        var completedTask = await Task.WhenAny(getHealthStatusTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == getHealthStatusTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await getHealthStatusTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
     }
     
 }
