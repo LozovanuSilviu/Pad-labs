@@ -1,7 +1,7 @@
 const express = require('express');
 const Redis = require('ioredis');
 const app = express();
-const port = 3000;
+const port = 1234;
 
 // Create a Redis client to connect to the Redis server (Docker image)
 const redis = new Redis({
@@ -9,37 +9,61 @@ const redis = new Redis({
     port: 6379,   // Redis default port
 });
 
-app.get('/api/data', async (req, res) => {
-    const { cacheKey } = req.body;
-
-    // Try to retrieve data from the cache
-    const cachedData = await redis.get(cacheKey);
-
-    if (cachedData) {
-        // Data found in the cache, return it
-        res.json({ source: 'cache', data: JSON.parse(cachedData), message:'cache'});
-    } else {
-        // Data not found in the cache, simulate a time-consuming operation
-        const data = { message: 'no cached data' };
-
-        // Store data in the cache with a 30-second expiration
-        await redis.set(cacheKey, JSON.stringify(data), 'EX', 30);
-
-        res.json({ source: 'api', data });
-    }
+redis.on('connect', () => {
+    console.log('Connected to Redis');
 });
 
-app.post('/api/data', express.json(), async (req, res) => {
-    const { cacheKey, data } = req.body;
+// Listen for the 'error' event to handle connection errors
+redis.on('error', (err) => {
+    console.error('Redis connection error:', err);
+});
 
+app.get('/api/data', (req, res) => {
+    console.log("get cache")
+    const {cacheKey} = req.query;
+    console.log(cacheKey+"key")
+
+
+    if (!cacheKey) {
+         res.status(400).json({ error: 'Cache key and data is required.' });
+    }
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    redis.get(cacheKey)
+        .then((cachedData) => {
+            console.log(cachedData+"cache")
+            if (cachedData) {
+                try {
+                      res.json({ source: 'cache', data: cachedData, message: 'succeeded' });
+                } catch (error) {
+                    console.error('JSON parsing error:', error);
+                    res.status(500).json({ error: 'Internal Server Error' });
+                }
+            } else {
+                // Handle the case when no data is found in the cache
+                res.status(404).json({ message: 'failed' });
+            }
+        })
+        .catch((error) => {
+            console.error('Redis error2:', error);
+            res.status(500).json({ error: 'Internal Server Error' });
+        });
+
+});
+
+app.post('/api/data', express.json(), (req, res) => {
+    console.log("add cache")
+
+    const {cacheKey, data} = req.body;
     if (!cacheKey || !data) {
-        return res.status(400).json({ error: 'Cache key and data are required.' });
+         res.status(400).json({ error: 'Cache key and data are required.' });
     }
 
-    // Store the provided data in the cache with a 30-second expiration
-    await redis.set(cacheKey, JSON.stringify(data), 'EX', 10);
-
-    res.json({ message: 'Data has been cached successfully.' });
+    redis.set(cacheKey, data, 'EX', 240).then(() => {
+        res.json({ message: 'Data has been cached successfully.' });
+    }).catch((error) => {
+        console.error('Redis error3:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    });
 });
 
 app.listen(port, () => {

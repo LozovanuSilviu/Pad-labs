@@ -26,10 +26,27 @@
 
 ##  Technology Stack and Communication Patterns 
 
-- **Gateway:** JS, NestJs framework
-- **Inventory Service:** .NET, MongoDB. 
-- **Renting Service Service:** .NET , MongoDB.
+- **Gateway, Cache:** JS
+- **Inventory Service:** .NET, Postgres. 
+- **Renting Service Service:** .NET , Postgres.
 - **Kafka** Communication between services
+
+##  How to run
+Run following command
+>`docker pull lozsilviuk017/inventory`
+
+>`docker pull lozsilviuk017/cache`
+
+>`docker pull lozsilviuk017/rentingservice`
+
+Clone this repo
+>` https://github.com/LozovanuSilviu/Pad-labs.git`
+
+At the root folder run the following command
+>`docker-compose up`
+
+After running this command we can enter the any of the 3 services (inventory, renting) easiest way open the pad labs container then open the container for the service to be tested and then click on the link where the ports are mappped. Add to the url "/swagger" and test the endpoints
+For cache service open the localhost in the same manner and to get the cache add to the url "/api/data?cacheKey=data", keep in mind before this you should add a book so that cache will be saved.
 
 ## Design Data Management
 

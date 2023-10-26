@@ -2,15 +2,19 @@ using InventoryService.Data;
 using InventoryService.Data.Entities;
 using InventoryService.Enums;
 using InventoryService.Models;
+using Newtonsoft.Json;
+using RestSharp;
 
 namespace InventoryService.Services;
 
 public class BookService
 {
     private readonly AppDbContext _dbContext;
+    private readonly RestClient client;
     public BookService(AppDbContext dbContext)
     {
         _dbContext = dbContext;
+         client = new RestClient("http://cache:1234");
     }
 
     public Task<List<Book>> SearchBook(string criteria)
@@ -30,7 +34,7 @@ public class BookService
    
     }
     
-     public  Task<string> AddBook(AddBookModel newBook)
+     public async Task<string> AddBook(AddBookModel newBook)
      {
          try
          {
@@ -44,7 +48,16 @@ public class BookService
              };
              _dbContext.Add(book);
              _dbContext.SaveChanges();
-             return Task.FromResult("Successfully added");
+             var request = new RestRequest("/api/data", Method.Post);
+             var dataCache = await GetAllBooks();
+             var cache = new CacheModel()
+             {
+                 cacheKey = "data",
+                 data = JsonConvert.SerializeObject(dataCache)
+             };
+             request.AddBody(JsonConvert.SerializeObject(cache));
+             var res =await client.ExecuteAsync(request);
+             return await Task.FromResult("Successfully added"+res.Content);
          }
          catch (Exception e)
          {
@@ -61,6 +74,19 @@ public class BookService
              return Task.FromResult<List<Book>>(books);
          }
          catch (Exception e)
+         {
+             throw new Exception("No books found");
+         }
+         
+     }
+     public Task<Book> GetBookById(Guid id)
+     {
+         try
+         {
+             var book = _dbContext.Books.FirstOrDefault(x => x.bookId.Equals(id));
+             return Task.FromResult<Book>(book);
+         }
+            catch (Exception e)
          {
              throw new Exception("No books found");
          }

@@ -1,6 +1,8 @@
 using RentingService.Data;
 using RentingService.Data.Entities;
+using RentingService.Enums;
 using RentingService.Models;
+using RestSharp;
 
 namespace RentingService.Services;
 
@@ -11,9 +13,37 @@ public class LeanService
     {
         _dbContext = dbContext;
     }
+    
+    public int runningTasks { get; set; }
+    private const int taskLimit = 7;
+    SemaphoreSlim semaphore = new SemaphoreSlim(taskLimit);
 
-    public Task<DateTime> AddRent(NewRent rent)
+    public async Task<DateTime> AddRent(NewRent rent)
     {
+        if (runningTasks<taskLimit)
+        {
+            runningTasks++;
+        }
+        else
+        {
+            semaphore.Wait();
+            runningTasks++; 
+            semaphore.Release();
+        }
+
+        await Task.Delay(1500);
+        var id = rent.BookId;
+        // var client = new RestClient("http://localhost:6969");
+        // var request = new RestRequest("/api/get-all-books");
+        // request.AddQueryParameter("id", id);
+        var client = new RestClient("http://inventory:6969");
+        var request = new RestRequest("/api/get-book-by-id", Method.Post);
+        request.AddQueryParameter("id", id);
+        var response =await client.ExecuteAsync(request);
+        if (!response.StatusCode.Equals(200)&& response.Content.Length==0)
+        {
+            throw new Exception("No book found");
+        }
         var newRent = new Rent()
         {
             leaseId = Guid.NewGuid(),
@@ -24,11 +54,22 @@ public class LeanService
         };
         _dbContext.Add(newRent);
         _dbContext.SaveChanges();
-        return Task.FromResult(newRent.returnDate);
+        var updateRequest = new RestRequest($"/api/updateInfo/flag={BookEdit.Lease}/{id}", Method.Put);
+        var updateResponse =await client.ExecuteAsync(updateRequest);
+        return await Task.FromResult(newRent.returnDate);
     }
     
-    public Task<DateTime> AddReservation(NewReservation reservation)
+    public async Task<DateTime> AddReservation(NewReservation reservation)
     {
+        var id = reservation.BookId;
+        var client = new RestClient("http://inventory:6969");
+        var request = new RestRequest("/api/get-book-by-id", Method.Post);
+        request.AddQueryParameter("id", id);
+        var response =await client.ExecuteAsync(request);
+        if (!response.StatusCode.Equals(200))
+        {
+            throw new Exception("No book found");
+        }
         var newReservation = new Reservation()
         {
             reservationId = Guid.NewGuid(),
@@ -38,7 +79,9 @@ public class LeanService
         };
         _dbContext.Add(newReservation);
         _dbContext.SaveChanges();
-        return Task.FromResult(newReservation.reservedUntil);
+        var updateRequest = new RestRequest($"/api/updateInfo/flag={BookEdit.Reserve}/{id}", Method.Put);
+        var updateResponse =await client.ExecuteAsync(updateRequest);
+        return await Task.FromResult(newReservation.reservedUntil);
     }
     
     public Task<string> RemoveReservation(BaseReservationModel reservation)

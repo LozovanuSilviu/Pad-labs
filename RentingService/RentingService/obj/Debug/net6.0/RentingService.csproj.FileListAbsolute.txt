@@ -56,3 +56,4 @@
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/System.Text.Encodings.Web.dll
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/System.Text.Json.dll
 /Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/runtimes/browser/lib/net6.0/System.Text.Encodings.Web.dll
+/Users/silviulozovanu/Pad-labs/RentingService/RentingService/bin/Debug/net6.0/RestSharp.dll

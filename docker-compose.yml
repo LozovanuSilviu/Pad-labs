@@ -24,6 +24,19 @@ services:
     image: redis:latest
     container_name: "redis_cache"
     restart: unless-stopped
+    ports:
+      - "7379:7379"
+    networks:
+      pad-net:
+
+  cache_service:
+    image: cache:latest
+    container_name: "cache"
+    restart: unless-stopped
+    depends_on:
+      - redis_db
+    ports:
+      - "1234:1234"
     networks:
       pad-net:
 

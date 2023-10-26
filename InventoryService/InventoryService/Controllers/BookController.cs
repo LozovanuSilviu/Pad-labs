@@ -3,6 +3,8 @@ using InventoryService.Enums;
 using InventoryService.Models;
 using InventoryService.Services;
 using Microsoft.AspNetCore.Mvc;
+using Newtonsoft.Json;
+using RestSharp;
 
 namespace InventoryService.Controllers;
 
@@ -21,6 +23,7 @@ public class BookController : ControllerBase
     [Route("add-book")]
     public async Task<IActionResult> AddBook(AddBookModel newBook)
     {
+
         var addBookTask = Task.Run(() => _bookService.AddBook(newBook));
         
         var completedTask = await Task.WhenAny(addBookTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
@@ -78,6 +81,26 @@ public class BookController : ControllerBase
         }
     }
     
+    [HttpGet]
+    [Route("get-book-by-id/{id}")]
+    public async Task<IActionResult> GetBookById(Guid id)
+    {
+        var getBookByIdTask =Task.Run(() => _bookService.GetBookById(id));
+        var completedTask = await Task.WhenAny(getBookByIdTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == getBookByIdTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await getBookByIdTask;
+            return Ok(result);
+        }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            return StatusCode(500, "Operation timed out.");
+        }
+    }
+    
     [HttpDelete]
     [Route("remove-book")]
     public async Task<IActionResult> RemoveBook(BaseModel book)
@@ -120,7 +143,7 @@ public class BookController : ControllerBase
     
     [HttpGet]
     [Route("health")]
-    public async Task<IActionResult> GetHealthStatus(BookEdit operationType, Guid id )
+    public async Task<IActionResult> GetHealthStatus()
     {
         var getHealthStatusTask =Task.Run(() =>_bookService.GetHealthStatus(_bookService));
         var completedTask = await Task.WhenAny(getHealthStatusTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
