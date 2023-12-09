@@ -1,22 +1,128 @@
 version: '3'
 services:
-  inventory_service:
-    image: inventory:latest
-    container_name: "inventory"
+  api_gateway:
+    image: api-gateway:latest
+    container_name: "gateway"
     restart: unless-stopped
-#    depends_on:
-#      - service_discovery
+    depends_on:
+      - service_discovery
+      - renting_service3
     ports:
-      - "6969:80"
+      - "3000:3000"
     networks:
       pad-net:
 
-  renting_service:
-    image: rentingservice:latest
-    container_name: "renting"
+  service_discovery:
+    image: service-discovery:latest
+    container_name: "service-discovery"
     restart: unless-stopped
     ports:
+      - "3002:3002"
+    networks:
+      pad-net:
+
+
+  inventory_service1:
+    image: inventory:latest
+    container_name: "inventory-first"
+    restart: unless-stopped
+    depends_on:
+      - service_discovery
+    ports:
+      - "6969:80"
+    environment:
+      - PORT=80
+      - INSTANCE_NAME=inventory-first
+    networks:
+      pad-net:
+        
+  inventory_service2:
+    image: inventory:latest
+    container_name: "inventory-second"
+    restart: unless-stopped
+    depends_on:
+      - service_discovery
+      - inventory_service1
+    ports:
+      - "1102:80"
+    environment:
+      - PORT=80
+      - INSTANCE_NAME=inventory-second
+    networks:
+      pad-net:
+        
+  inventory_service3:
+    image: inventory:latest
+    container_name: "inventory-third"
+    restart: unless-stopped
+    depends_on:
+      - service_discovery
+      - inventory_service2
+    ports:
+      - "1103:80"
+    environment:
+      - PORT=80
+      - INSTANCE_NAME=inventory-third
+    networks:
+      pad-net:
+        
+  inventory_service4:
+    image: inventory:latest
+    container_name: "inventory-fourth"
+    restart: unless-stopped
+    depends_on:
+      - service_discovery
+      - inventory_service3
+    ports:
+      - "1104:80"
+    environment:
+      - PORT=80
+      - INSTANCE_NAME=inventory-fourth
+    networks:
+      pad-net:
+
+  renting_service1:
+    image: rentingservice:latest
+    container_name: "renting-first"
+    restart: unless-stopped
+    depends_on:
+      - service_discovery
+      - inventory_service3
+    ports:
       - "7979:80"
+    environment:
+      - PORT=80
+      - INSTANCE_NAME=renting-first
+    networks:
+      pad-net:
+        
+  renting_service2:
+    image: rentingservice:latest
+    container_name: "renting-second"
+    restart: unless-stopped
+    depends_on:
+      - service_discovery
+      - renting_service1
+    ports:
+      - "2201:80"
+    environment:
+      - PORT=80
+      - INSTANCE_NAME=renting-second
+    networks:
+      pad-net:
+      
+  renting_service3:
+    image: rentingservice:latest
+    container_name: "renting-third"
+    restart: unless-stopped
+    depends_on:
+      - service_discovery
+      - renting_service2
+    ports:
+      - "2202:80"
+    environment:
+      - PORT=80
+      - INSTANCE_NAME=renting-third
     networks:
       pad-net:
 
@@ -35,8 +141,12 @@ services:
     restart: unless-stopped
     depends_on:
       - redis_db
+      - service_discovery
     ports:
       - "1234:1234"
+    environment:
+      - PORT=1234
+      - INSTANCE_NAME=cache
     networks:
       pad-net:
 
@@ -63,6 +173,33 @@ services:
       - pgadmin_data:/var/lib/pgadmin
     ports:
       - "5481:80"
+    networks:
+      pad-net:
+        
+  prometheus:
+    image: prom/prometheus:v2.47.2
+    depends_on:
+      - service_discovery
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - 9090:9090
+    networks:
+      pad-net:
+        
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - '5678:3000'
+    depends_on:
+      - prometheus
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=secret
     networks:
       pad-net:
 

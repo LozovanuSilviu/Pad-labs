@@ -50,3 +50,7 @@
 /Users/silviulozovanu/Pad-labs/InventoryService/InventoryService/obj/Debug/net6.0/InventoryService.pdb
 /Users/silviulozovanu/Pad-labs/InventoryService/InventoryService/obj/Debug/net6.0/InventoryService.genruntimeconfig.cache
 /Users/silviulozovanu/Pad-labs/InventoryService/InventoryService/obj/Debug/net6.0/ref/InventoryService.dll
+/Users/silviulozovanu/Pad-labs/InventoryService/InventoryService/bin/Debug/net6.0/RestSharp.dll
+/Users/silviulozovanu/Pad-labs/InventoryService/InventoryService/bin/Debug/net6.0/System.Text.Encodings.Web.dll
+/Users/silviulozovanu/Pad-labs/InventoryService/InventoryService/bin/Debug/net6.0/System.Text.Json.dll
+/Users/silviulozovanu/Pad-labs/InventoryService/InventoryService/bin/Debug/net6.0/runtimes/browser/lib/net6.0/System.Text.Encodings.Web.dll

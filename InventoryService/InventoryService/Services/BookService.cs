@@ -10,11 +10,12 @@ namespace InventoryService.Services;
 public class BookService
 {
     private readonly AppDbContext _dbContext;
-    private readonly RestClient client;
+    private List<string> metricsResponse = new List<string>();
+
     public BookService(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-         client = new RestClient("http://cache:1234");
+        
     }
 
     public Task<List<Book>> SearchBook(string criteria)
@@ -34,8 +35,9 @@ public class BookService
    
     }
     
-     public async Task<string> AddBook(AddBookModel newBook)
+     public async Task<Book> AddBook(AddBookModel newBook)
      {
+         var client = new RestClient("http://gateway:3000");
          try
          {
              var book = new Book()
@@ -44,20 +46,20 @@ public class BookService
                  bookAuthor = newBook.BookAuthor,
                  bookName = newBook.BookName,
                  availableCount = newBook.AvailableCount,
-                 reservedCount = 0
+                 reservedCount = 0  
              };
              _dbContext.Add(book);
              _dbContext.SaveChanges();
-             var request = new RestRequest("/api/data", Method.Post);
-             var dataCache = await GetAllBooks();
-             var cache = new CacheModel()
-             {
-                 cacheKey = "data",
-                 data = JsonConvert.SerializeObject(dataCache)
-             };
-             request.AddBody(JsonConvert.SerializeObject(cache));
+             var request = new RestRequest("/api/clear-cache", Method.Post);
+             // var dataCache = await GetAllBooks();
+             // var cache = new CacheModel()
+             // {
+             //     cacheKey = "data",
+             //     data = JsonConvert.SerializeObject(dataCache)
+             // };
+             // request.AddBody(JsonConvert.SerializeObject(cache));
              var res =await client.ExecuteAsync(request);
-             return await Task.FromResult("Successfully added"+res.Content);
+             return await Task.FromResult(book);
          }
          catch (Exception e)
          {
@@ -68,6 +70,7 @@ public class BookService
 
      public Task<List<Book>> GetAllBooks()
      {
+         var client = new RestClient("http://gateway:3000");
          try
          {
              var books = _dbContext.Books.ToList();
@@ -125,7 +128,7 @@ public class BookService
                  {
                      book.availableCount+=1;
                      book.reservedCount-=1;
-                     break;
+                     break; 
                  }
                  case BookEdit.Lease:
                  {
@@ -166,5 +169,16 @@ public class BookService
          }
 
          return status;
+     }
+
+     public async Task<string> GetMetrics(Dictionary<int,int> requestCounts)
+     {
+         metricsResponse.Add("# HELP http_requests_total The total number of HTTP requests.");
+         metricsResponse.Add("# TYPE http_requests_total counter" );
+         foreach (var pair in requestCounts)
+         {
+             metricsResponse.Add($"http_requests_total{{code=\"{pair.Key}\"}} {pair.Value}" );
+         }
+         return  String.Join("\n", metricsResponse); 
      }
 }

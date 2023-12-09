@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+using Newtonsoft.Json;
 using RentingService.Data;
 using RentingService.Data.Entities;
 using RentingService.Enums;
@@ -13,10 +15,19 @@ public class LeanService
     {
         _dbContext = dbContext;
     }
-    
     public int runningTasks { get; set; }
     private const int taskLimit = 7;
     SemaphoreSlim semaphore = new SemaphoreSlim(taskLimit);
+    private List<string> metricsResponse = new List<string>();
+   
+
+
+    public static bool IsGuid(string value)
+    {
+        string guidPattern = @"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$";
+        Regex guidRegex = new Regex(guidPattern);
+        return guidRegex.IsMatch(value);
+    }
 
     public async Task<DateTime> AddRent(NewRent rent)
     {
@@ -28,22 +39,35 @@ public class LeanService
         {
             semaphore.Wait();
             runningTasks++; 
-            semaphore.Release();
+            semaphore.Release(); 
         }
 
-        await Task.Delay(1500);
         var id = rent.BookId;
-        // var client = new RestClient("http://localhost:6969");
-        // var request = new RestRequest("/api/get-all-books");
-        // request.AddQueryParameter("id", id);
-        var client = new RestClient("http://inventory:6969");
-        var request = new RestRequest("/api/get-book-by-id", Method.Post);
-        request.AddQueryParameter("id", id);
-        var response =await client.ExecuteAsync(request);
-        if (!response.StatusCode.Equals(200)&& response.Content.Length==0)
+        var client = new RestClient("http://gateway:3000");
+        var book = new BookModel();
+        try
+        {
+            var request = new RestRequest("/get-book-by-id/{id}", Method.Get);
+            request.AddUrlSegment("id", id);
+            var response =await client.ExecuteAsync(request);
+            var deserializedResponse = JsonConvert.DeserializeObject<BookModel>(response.Content);
+            if (IsGuid(deserializedResponse.bookId.ToString()))
+            {
+                book.bookId = deserializedResponse.bookId;
+                book.bookName = deserializedResponse.bookName;
+                book.bookAuthor = deserializedResponse.bookAuthor;
+                book.reservedCount = deserializedResponse.reservedCount;
+                book.availableCount = deserializedResponse.availableCount;
+            }
+        }
+        catch (Exception e)
         {
             throw new Exception("No book found");
         }
+        
+        var updateRequest = new RestRequest($"/updateInfo/flag={BookEdit.Lease}/{id}", Method.Put);
+        var updateResponse =await client.ExecuteAsync(updateRequest);
+        var deserializedUpdateRespone = JsonConvert.DeserializeObject<BookModel>(updateResponse.Content);
         var newRent = new Rent()
         {
             leaseId = Guid.NewGuid(),
@@ -52,21 +76,31 @@ public class LeanService
             bookId = rent.BookId,
             customerName = rent.CustomerName
         };
-        _dbContext.Add(newRent);
-        _dbContext.SaveChanges();
-        var updateRequest = new RestRequest($"/api/updateInfo/flag={BookEdit.Lease}/{id}", Method.Put);
-        var updateResponse =await client.ExecuteAsync(updateRequest);
+
+        if (deserializedUpdateRespone.availableCount != book.availableCount)
+        {
+            
+            _dbContext.Add(newRent);
+            _dbContext.SaveChanges();
+        }
+        else
+        {
+            var rollbackUpdateRequest = new RestRequest($"/updateInfo/flag={BookEdit.Return}/{id}", Method.Put);
+            await client.ExecuteAsync(rollbackUpdateRequest);
+            return await Task.FromResult(new DateTime(0, 0, 0));
+        }
         return await Task.FromResult(newRent.returnDate);
     }
     
     public async Task<DateTime> AddReservation(NewReservation reservation)
     {
         var id = reservation.BookId;
-        var client = new RestClient("http://inventory:6969");
-        var request = new RestRequest("/api/get-book-by-id", Method.Post);
-        request.AddQueryParameter("id", id);
+        var client = new RestClient("http://gateway:3000");
+        var request = new RestRequest("/get-book-by-id/{id}", Method.Get);
+        request.AddUrlSegment("id", id);
         var response =await client.ExecuteAsync(request);
-        if (!response.StatusCode.Equals(200))
+        var deserializedResponse = JsonConvert.DeserializeObject<BookModel>(response.Content);
+        if (!IsGuid(deserializedResponse.bookId.ToString()))
         {
             throw new Exception("No book found");
         }
@@ -79,7 +113,7 @@ public class LeanService
         };
         _dbContext.Add(newReservation);
         _dbContext.SaveChanges();
-        var updateRequest = new RestRequest($"/api/updateInfo/flag={BookEdit.Reserve}/{id}", Method.Put);
+        var updateRequest = new RestRequest($"/updateInfo/flag={BookEdit.Reserve}/{id}", Method.Put);
         var updateResponse =await client.ExecuteAsync(updateRequest);
         return await Task.FromResult(newReservation.reservedUntil);
     }
@@ -102,10 +136,10 @@ public class LeanService
         return Task.FromResult( "Successfully ended lease");
     }
     
-    public Task<IQueryable<Rent>> SearchLease(string customerName)
+    public async Task<IQueryable<Rent>> SearchLease(string customerName)
     {
         var lease = _dbContext.Rents.Where(x => x.customerName.Equals(customerName));
-        return Task.FromResult(lease);
+        return await Task.FromResult(lease);
     }
 
     public async Task<IQueryable<Rent>> GetLeases()
@@ -141,5 +175,16 @@ public class LeanService
         }
 
         return status;
+    }
+
+    public async Task<string> GetMetrics(Dictionary<int,int>requestCounts)
+    {
+        metricsResponse.Add("# HELP http_requests_total The total number of HTTP requests.");
+        metricsResponse.Add("# TYPE http_requests_total counter" );
+        foreach (var pair in requestCounts)
+        {
+            metricsResponse.Add($"http_requests_total{{code=\"{pair.Key}\"}} {pair.Value}" );
+        }
+        return  String.Join("\n", metricsResponse); 
     }
 }

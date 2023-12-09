@@ -3,16 +3,14 @@ using InventoryService.Enums;
 using InventoryService.Models;
 using InventoryService.Services;
 using Microsoft.AspNetCore.Mvc;
-using Newtonsoft.Json;
-using RestSharp;
 
 namespace InventoryService.Controllers;
 
 [ApiController]
-[Route("api")]
 public class BookController : ControllerBase
 {
     private readonly BookService _bookService;
+    private static readonly Dictionary<int, int> RequestCounts = new Dictionary<int, int>() {{200,0},{400,0},{500,0},{404,0}};
 
     public BookController(BookService bookService,AppDbContext dbContext)
     {
@@ -23,22 +21,33 @@ public class BookController : ControllerBase
     [Route("add-book")]
     public async Task<IActionResult> AddBook(AddBookModel newBook)
     {
-
-        var addBookTask = Task.Run(() => _bookService.AddBook(newBook));
-        
-        var completedTask = await Task.WhenAny(addBookTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
-        
-        if (completedTask == addBookTask)
+        try
         {
-            // The AddBook task completed before the timeout
-            var result = await addBookTask;
-            return Ok(result);
+            var addBookTask = Task.Run(() => _bookService.AddBook(newBook));
+        
+            var completedTask = await Task.WhenAny(addBookTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+            if (completedTask == addBookTask)
+            {
+                // The AddBook task completed before the timeout
+                var result = await addBookTask;
+                RequestCounts[200]++;
+                return Ok(result);
+            }
+            else
+            {
+                // The timeout task completed before the AddBook task
+                RequestCounts[500]++;
+                return StatusCode(500, "Operation timed out.");
+            }
         }
-        else
+        catch (Exception e)
         {
-            // The timeout task completed before the AddBook task
-            return StatusCode(500, "Operation timed out.");
+            Console.WriteLine(e);
+            RequestCounts[500]++;
+            return StatusCode(500,$"{e.Message}");
         }
+       
     } 
     
     [HttpGet]
@@ -52,11 +61,13 @@ public class BookController : ControllerBase
         {
             // The AddBook task completed before the timeout
             var result = await searchBookTask;
+            RequestCounts[200]++;
             return Ok(result);
         }
         else
         {
             // The timeout task completed before the AddBook task
+            RequestCounts[500]++;
             return StatusCode(500, "Operation timed out.");
         }
     } 
@@ -72,11 +83,13 @@ public class BookController : ControllerBase
         {
             // The AddBook task completed before the timeout
             var result = await getAllBooksTask;
+            RequestCounts[200]++;
             return Ok(result);
         }
         else
         {
             // The timeout task completed before the AddBook task
+            RequestCounts[500]++;
             return StatusCode(500, "Operation timed out.");
         }
     }
@@ -92,11 +105,13 @@ public class BookController : ControllerBase
         {
             // The AddBook task completed before the timeout
             var result = await getBookByIdTask;
+            RequestCounts[200]++;
             return Ok(result);
         }
         else
         {
             // The timeout task completed before the AddBook task
+            RequestCounts[500]++;
             return StatusCode(500, "Operation timed out.");
         }
     }
@@ -112,11 +127,13 @@ public class BookController : ControllerBase
         {
             // The AddBook task completed before the timeout
             var result = await removeBookTask;
+            RequestCounts[200]++;
             return Ok(result);
         }
         else
         {
             // The timeout task completed before the AddBook task
+            RequestCounts[500]++;
             return StatusCode(500, "Operation timed out.");
         }
     }  
@@ -126,17 +143,19 @@ public class BookController : ControllerBase
     public async Task<IActionResult> UpdateBookInfo(BookEdit operationType, Guid id )
     {
         var updateBookInfoTask =Task.Run(() =>_bookService.UpdateInfo(operationType,id));
-        var completedTask = await Task.WhenAny(updateBookInfoTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        var completedTask = await Task.WhenAny(updateBookInfoTask, Task.Delay(TimeSpan.FromMilliseconds(4000)));
         
         if (completedTask == updateBookInfoTask)
         {
             // The AddBook task completed before the timeout
             var result = await updateBookInfoTask;
+            RequestCounts[200]++;
             return Ok(result);
         }
         else
         {
             // The timeout task completed before the AddBook task
+            RequestCounts[500]++;
             return StatusCode(500, "Operation timed out.");
         }
     }
@@ -152,8 +171,30 @@ public class BookController : ControllerBase
         {
             // The AddBook task completed before the timeout
             var result = await getHealthStatusTask;
+            RequestCounts[200]++;
             return Ok(result);
         }
+        else
+        {
+            // The timeout task completed before the AddBook task
+            RequestCounts[500]++;
+            return StatusCode(500, "Operation timed out.");
+        }
+    }
+    
+    [HttpGet]
+    [Route("metrics")]
+    public async Task<IActionResult> GetMetrics()
+    {
+        var getMetricsTask =Task.Run(() =>_bookService.GetMetrics(RequestCounts));
+        var completedTask = await Task.WhenAny(getMetricsTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
+        
+        if (completedTask == getMetricsTask)
+        {
+            // The AddBook task completed before the timeout
+            var result = await getMetricsTask;
+            return Ok(result);
+        }   
         else
         {
             // The timeout task completed before the AddBook task
