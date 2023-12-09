@@ -51,13 +51,6 @@ public class BookService
              _dbContext.Add(book);
              _dbContext.SaveChanges();
              var request = new RestRequest("/api/clear-cache", Method.Post);
-             // var dataCache = await GetAllBooks();
-             // var cache = new CacheModel()
-             // {
-             //     cacheKey = "data",
-             //     data = JsonConvert.SerializeObject(dataCache)
-             // };
-             // request.AddBody(JsonConvert.SerializeObject(cache));
              var res =await client.ExecuteAsync(request);
              return await Task.FromResult(book);
          }
@@ -68,13 +61,35 @@ public class BookService
        
      }
 
-     public Task<List<Book>> GetAllBooks()
+     public async Task<List<Book>> GetAllBooks()
      {
          var client = new RestClient("http://gateway:3000");
          try
          {
-             var books = _dbContext.Books.ToList();
-             return Task.FromResult<List<Book>>(books);
+             var request = new RestRequest($"/api/data?cacheKey=data", Method.Get);
+             var response = await client.ExecuteAsync(request);
+             Console.WriteLine(response.Content);
+             var deserialized = JsonConvert.DeserializeObject<CacheData>(response.Content);
+             if (deserialized.Data == null)
+             {
+                 var books = _dbContext.Books.ToList();
+                 var cache = new CacheModel()
+                 {
+                     cacheKey = "data",
+                     data = JsonConvert.SerializeObject(books)
+                 };
+                 var saveCacheRequest = new RestRequest("/api/data", Method.Post);
+                 saveCacheRequest.AddBody(JsonConvert.SerializeObject(cache));
+                 await client.ExecuteAsync(saveCacheRequest);
+                 Console.WriteLine("returned data from db");
+                 return await Task.FromResult<List<Book>>(books);
+             }
+             else
+             {
+                 Console.WriteLine("returned data from cache");
+                 return await Task.FromResult<List<Book>>(JsonConvert.DeserializeObject<List<Book>>(deserialized.Data));
+             }
+           
          }
          catch (Exception e)
          {
