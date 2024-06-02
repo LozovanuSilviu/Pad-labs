@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using InventoryService.Data;
 using InventoryService.Enums;
 using InventoryService.Models;
@@ -76,22 +77,7 @@ public class BookController : ControllerBase
     [Route("get-all-books")]
     public async Task<IActionResult> GetAllBooks()
     {
-        var getAllBooksTask =Task.Run(() => _bookService.GetAllBooks());
-        var completedTask = await Task.WhenAny(getAllBooksTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
-        
-        if (completedTask == getAllBooksTask)
-        {
-            // The AddBook task completed before the timeout
-            var result = await getAllBooksTask;
-            RequestCounts[200]++;
-            return Ok(result);
-        }
-        else
-        {
-            // The timeout task completed before the AddBook task
-            RequestCounts[500]++;
-            return StatusCode(500, "Operation timed out.");
-        }
+        return Ok(await _bookService.GetAllBooks() ) ;
     }
     
     [HttpGet]
@@ -120,22 +106,8 @@ public class BookController : ControllerBase
     [Route("remove-book")]
     public async Task<IActionResult> RemoveBook(BaseModel book)
     {
-        var removeBookTask =Task.Run(() =>_bookService.RemoveBook(book));
-        var completedTask = await Task.WhenAny(removeBookTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
-        
-        if (completedTask == removeBookTask)
-        {
-            // The AddBook task completed before the timeout
-            var result = await removeBookTask;
-            RequestCounts[200]++;
-            return Ok(result);
-        }
-        else
-        {
-            // The timeout task completed before the AddBook task
-            RequestCounts[500]++;
-            return StatusCode(500, "Operation timed out.");
-        }
+        await _bookService.RemoveBook(book);
+        return Ok(200);
     }  
     
     [HttpPut]

@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     depends_on:
       - service_discovery
-      - renting_service3
+      - renting_service2
     ports:
       - "3000:3000"
     networks:
@@ -20,7 +20,18 @@ services:
       - "3002:3002"
     networks:
       pad-net:
-
+      
+  identity:
+    image: identity:latest
+    container_name: "identity"
+    restart: unless-stopped
+    ports:
+      - "7777:80"
+    environment:
+      - PORT=80
+      - INSTANCE_NAME=identity
+    networks:
+      pad-net:
 
   inventory_service1:
     image: inventory:latest
@@ -50,36 +61,7 @@ services:
       - INSTANCE_NAME=inventory-second
     networks:
       pad-net:
-        
-  inventory_service3:
-    image: inventory:latest
-    container_name: "inventory-third"
-    restart: unless-stopped
-    depends_on:
-      - service_discovery
-      - inventory_service2
-    ports:
-      - "1103:80"
-    environment:
-      - PORT=80
-      - INSTANCE_NAME=inventory-third
-    networks:
-      pad-net:
-        
-  inventory_service4:
-    image: inventory:latest
-    container_name: "inventory-fourth"
-    restart: unless-stopped
-    depends_on:
-      - service_discovery
-      - inventory_service3
-    ports:
-      - "1104:80"
-    environment:
-      - PORT=80
-      - INSTANCE_NAME=inventory-fourth
-    networks:
-      pad-net:
+
 
   renting_service1:
     image: rentingservice:latest
@@ -87,7 +69,7 @@ services:
     restart: unless-stopped
     depends_on:
       - service_discovery
-      - inventory_service3
+      - inventory_service2
     ports:
       - "7979:80"
     environment:
@@ -111,20 +93,6 @@ services:
     networks:
       pad-net:
       
-  renting_service3:
-    image: rentingservice:latest
-    container_name: "renting-third"
-    restart: unless-stopped
-    depends_on:
-      - service_discovery
-      - renting_service2
-    ports:
-      - "2202:80"
-    environment:
-      - PORT=80
-      - INSTANCE_NAME=renting-third
-    networks:
-      pad-net:
 
   redis_db:
     image: redis:latest
@@ -153,12 +121,17 @@ services:
   postgres:
     image: postgres:14.5-alpine
     container_name: my_postgres
+    expose:
+      - 5432
+    ports:
+      - 5432:5432
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     volumes:
       - ./pg_data:/var/lib/postgresql/data
       - ./InventoryService/InventoryService/Data/db.sql:/docker-entrypoint-initdb.d/inventory.sql
+      - ./Identity/Identity/Data/db.sql:/docker-entrypoint-initdb.d/identity.sql
       - ./RentingService/RentingService/Data/db.sql:/docker-entrypoint-initdb.d/renting.sql
     networks:
       pad-net:
@@ -208,3 +181,4 @@ volumes:
   pgadmin_data:
 networks:
   pad-net:
+    

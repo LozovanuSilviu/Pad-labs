@@ -14,6 +14,7 @@ let requestCounts = new Map([
     [500, 0],
     [404, 0],
 ]);
+let sickServices = [];
 
 app.use(bodyParser.json());
 let inventoryServiceIndex = 0;
@@ -45,6 +46,15 @@ app.get('/', (req, res) => {
              errCount++;
              if (errCount === 3) {
                  console.log(`Service "${serviceName}" at ${servicePort} is SICK. 3 errors in <= 52 seconds.`);
+                 const serviceIdentifier = serviceName + servicePort;
+
+                 if (!sickServices.includes(serviceIdentifier)) {
+                     sickServices.push(serviceIdentifier);
+                 }
+                 if (sickServices.length>3)
+                 {
+                     console.log(`Multiple reroutes happened, sick services: ${sickServices}`)
+                 }
                  return false; // Service is sick
              }
          }
@@ -76,31 +86,25 @@ app.get('/get-book-by-id/:id', async (req, res) => {
             res.status(500).json({ error: `Failed to fetch data from ${serviceInstance.serviceName}` });
         }
     }
-
 });
 
 app.get('/api/data', async (req, res) => {
     const cacheServiceUrl = `http://${cacheService[0].serviceName}:${cacheService[0].port}/api/data`;
 
     try {
-        console.log(req.query);
         const response = await axios.get(cacheServiceUrl, {
             params: req.query, // Pass the query parameters from the original request
         });
 
-        requestCounts.set(200, requestCounts.get(200) + 1);
         res.status(200).json(response.data);
     } catch (error) {
         if (error.message === "Request failed with status code 404")
         {
-            console.log("catching")
-            requestCounts.set(200, requestCounts.get(200) + 1);
             res.status(200).json({source: 'cache', data: null, message: 'succeeded'})
         }
         else
         {
             console.error('Error forwarding request to cache service:', error.message);
-            requestCounts.set(500, requestCounts.get(500) + 1);
             res.status(500).json({ error: 'Failed to forward request to cache service' });
         }
     }

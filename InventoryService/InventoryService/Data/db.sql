@@ -27,6 +27,7 @@ CREATE TABLE inventory."Books"
     "bookAuthor" varchar(255) NOT NULL,
     "availableCount" int NOT NULL,
     "bookId" uuid NOT NULL,
+    "libraryId" uuid NOT NULL,
     "reservedCount" int NOT NULL
 ) TABLESPACE pg_default;
 

@@ -33,25 +33,20 @@ app.get('/api/data', (req, res) => {
 
 
     if (!cacheKey) {
-        requestCounts.set(400, requestCounts.get(400) + 1);
          res.status(400).json({ error: 'Cache key and data is required.' });
     }
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     redis.get(cacheKey)
         .then((cachedData) => {
-            console.log(cachedData+"cache")
             if (cachedData) {
                 try {
-                    requestCounts.set(200, requestCounts.get(200) + 1);
                       res.json({ source: 'cache', data: cachedData, message: 'succeeded' });
                 } catch (error) {
                     console.error('JSON parsing error:', error);
-                    requestCounts.set(500, requestCounts.get(500) + 1);
                     res.status(500).json({ error: 'Internal Server Error' });
                 }
             } else {
                 // Handle the case when no data is found in the cache
-                requestCounts.set(404, requestCounts.get(404) + 1);
                 res.status(404).json({ message: 'failed' });
             }
         })
@@ -73,14 +68,11 @@ app.post('/api/data', express.json(), (req, res) => {
          return res.status(400).json({ error: 'Cache key and data are required.' });
     }
 
-    redis.set(cacheKey, data, 'EX', 240).then(() => {
-        requestCounts.set(200, requestCounts.get(200) + 1);
+    redis.set(cacheKey, data, 'EX', 3600).then(() => {
         console.log("exited sucess")
         return res.json({ message: 'Data has been cached successfully.' });
     }).catch((error) => {
         console.error('Redis error3:', error);
-        requestCounts.set(500, requestCounts.get(500) + 1);
-        console.log("exited fail")
         return res.status(500).json({ error: 'Internal Server Error' });
     });
 });
@@ -88,7 +80,6 @@ app.post('/api/data', express.json(), (req, res) => {
 app.post('/api/clear-cache', (req, res) => {
     console.log("cache service clear")
     redis.flushall();
-    requestCounts.set(200, requestCounts.get(200) + 1);
     res.json({ message: 'Cache deleted successfully' });
 });
 

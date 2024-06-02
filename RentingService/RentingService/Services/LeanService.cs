@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using Microsoft.EntityFrameworkCore;
 using Newtonsoft.Json;
 using RentingService.Data;
 using RentingService.Data.Entities;
@@ -43,12 +44,14 @@ public class LeanService
         }
 
         var id = rent.BookId;
-        var client = new RestClient("http://gateway:3000");
+        var client = new RestClient("http://inventory-first:80");
+        var client2 = new RestClient("http://gateway:3000");
         var book = new BookModel();
         try
         {
-            var request = new RestRequest("/get-book-by-id/{id}", Method.Get);
-            request.AddUrlSegment("id", id);
+            
+            var request = new RestRequest($"/get-book-by-id/{id}", Method.Get);
+            // request.AddUrlSegment("id", id);
             var response =await client.ExecuteAsync(request);
             var deserializedResponse = JsonConvert.DeserializeObject<BookModel>(response.Content);
             if (IsGuid(deserializedResponse.bookId.ToString()))
@@ -68,11 +71,12 @@ public class LeanService
         var updateRequest = new RestRequest($"/updateInfo/flag={BookEdit.Lease}/{id}", Method.Put);
         var updateResponse =await client.ExecuteAsync(updateRequest);
         var deserializedUpdateRespone = JsonConvert.DeserializeObject<BookModel>(updateResponse.Content);
+        var returnDate = DateTime.Parse(rent.ReturnDate).ToUniversalTime();
         var newRent = new Rent()
         {
             leaseId = Guid.NewGuid(),
             leaseStartDate = DateTime.UtcNow,
-            returnDate = DateTime.UtcNow.AddDays(7),
+            returnDate = returnDate,
             bookId = rent.BookId,
             customerName = rent.CustomerName
         };
@@ -80,7 +84,7 @@ public class LeanService
         if (deserializedUpdateRespone.availableCount != book.availableCount)
         {
             
-            _dbContext.Add(newRent);
+            _dbContext.Rents.Add(newRent);
             _dbContext.SaveChanges();
         }
         else
@@ -89,6 +93,8 @@ public class LeanService
             await client.ExecuteAsync(rollbackUpdateRequest);
             return await Task.FromResult(new DateTime(0, 0, 0));
         }
+        var clearCache = new RestRequest("/api/clear-cache", Method.Post);
+        await client2.ExecuteAsync(clearCache);
         return await Task.FromResult(newRent.returnDate);
     }
     
@@ -96,8 +102,7 @@ public class LeanService
     {
         var id = reservation.BookId;
         var client = new RestClient("http://gateway:3000");
-        var request = new RestRequest("/get-book-by-id/{id}", Method.Get);
-        request.AddUrlSegment("id", id);
+        var request = new RestRequest($"/get-book-by-id/{id}", Method.Get);
         var response =await client.ExecuteAsync(request);
         var deserializedResponse = JsonConvert.DeserializeObject<BookModel>(response.Content);
         if (!IsGuid(deserializedResponse.bookId.ToString()))
@@ -108,13 +113,17 @@ public class LeanService
         {
             reservationId = Guid.NewGuid(),
             reservedUntil = DateTime.UtcNow.AddDays(1),
-            bookId = reservation.BookId,
+            bookId = Guid.Parse(reservation.BookId),
             customerName = reservation.CustomerName
         };
         _dbContext.Add(newReservation);
         _dbContext.SaveChanges();
         var updateRequest = new RestRequest($"/updateInfo/flag={BookEdit.Reserve}/{id}", Method.Put);
+        var clearCache = new RestRequest("/api/clear-cache", Method.Post);
+        
         var updateResponse =await client.ExecuteAsync(updateRequest);
+        await client.ExecuteAsync(clearCache);
+
         return await Task.FromResult(newReservation.reservedUntil);
     }
     
@@ -127,13 +136,18 @@ public class LeanService
         return Task.FromResult( "Successfully canceled reservation");
     }
     
-    public Task<string> CloseLease(BaseRentModel renting)
+    public async Task<string> CloseLease(CloseLeaseModel renting)
     {
+        var client = new RestClient("http://gateway:3000");
+        var updateRequest = new RestRequest($"/updateInfo/flag={BookEdit.Return}/{renting.bookId}", Method.Put);
         var reservationToRemove =
             _dbContext.Rents.FirstOrDefault(x => x.leaseId.Equals(renting.leaseId));
         _dbContext.Remove(reservationToRemove);
         _dbContext.SaveChanges();
-        return Task.FromResult( "Successfully ended lease");
+        await client.ExecuteAsync(updateRequest);
+        var clearCache = new RestRequest("/api/clear-cache", Method.Post);
+        await client.ExecuteAsync(clearCache);
+        return await Task.FromResult( "Successfully ended lease");
     }
     
     public async Task<IQueryable<Rent>> SearchLease(string customerName)
@@ -142,16 +156,54 @@ public class LeanService
         return await Task.FromResult(lease);
     }
 
-    public async Task<IQueryable<Rent>> GetLeases()
+    public async Task<List<RentDetails>> GetLeases()    
     {
-        var leases = _dbContext.Rents.AsQueryable();
-        return await Task.FromResult(leases);
+        var leases =await _dbContext.Rents.ToListAsync();
+        var client = new RestClient("http://inventory-first:80");
+        var request = new RestRequest("/get-all-books");
+        var response = await client.ExecuteAsync(request);
+        var deserialized =  JsonConvert.DeserializeObject<List<RentDetails>>(response.Content).AsQueryable();
+        var leasesDetail = new List<RentDetails>();
+        foreach (var lease in leases)
+        {
+            var book = deserialized.FirstOrDefault(x => x.bookId.Equals(lease.bookId));
+            var ldetail = new RentDetails()
+            {
+                bookId = lease.bookId,
+                bookName = book!.bookName,
+                customerName = lease.customerName,
+                leaseId = lease.leaseId,
+                leaseStartDate = lease.leaseStartDate.ToString("yyyy-MM-dd:HH"),
+                returnDate = lease.returnDate.ToString("yyyy-MM-dd:HH")
+            };
+            leasesDetail.Add(ldetail);
+        }
+        
+        return leasesDetail;
     }
 
-    public async Task<IQueryable<Reservation>> GetReservations()    
+    public async Task<List<ReservationDetails>> GetReservations()
     {
-        var reservations =_dbContext.Reservations.AsQueryable();
-        return await Task.FromResult(reservations);
+        var client = new RestClient("http://inventory-first:80");
+        var request = new RestRequest("/get-all-books");
+        var response = await client.ExecuteAsync(request);
+        var deserialized =  JsonConvert.DeserializeObject<List<Book>>(response.Content).AsQueryable();
+        var reservations =_dbContext.Reservations.ToList();
+        var reservationsDetails = new List<ReservationDetails>();
+        foreach (var reservation in reservations)
+        {
+            var book = deserialized.FirstOrDefault(x => x.bookId.Equals(reservation.bookId));
+            var rdetail = new ReservationDetails()
+            {
+                reservationId = reservation.reservationId,
+                bookId = reservation.bookId,
+                reservedUntil = reservation.reservedUntil.ToString("yyyy-MM-dd:HH"),
+                customerName = reservation.customerName,
+                bookName = book.bookName
+            };
+            reservationsDetails.Add(rdetail);
+        }
+        return await Task.FromResult(reservationsDetails);
     }
     
     public async Task<HealthStatus> GetHealthStatus(LeanService service)
@@ -186,5 +238,79 @@ public class LeanService
             metricsResponse.Add($"http_requests_total{{code=\"{pair.Key}\"}} {pair.Value}" );
         }
         return  String.Join("\n", metricsResponse); 
+    }
+
+    public async Task<List<ReservationDetails>> GetUserReservations(string name)
+    {
+        var client = new RestClient("http://inventory-first:80");
+        var request = new RestRequest("/get-all-books");
+        var response = await client.ExecuteAsync(request);
+        var deserialized =  JsonConvert.DeserializeObject<List<Book>>(response.Content).AsQueryable();
+        var reservations = await _dbContext.Reservations
+            .Where(x => x.customerName.Equals(name)).ToListAsync();
+            
+           var toReturn = reservations.Select( reservation => new ReservationDetails()
+            {
+                reservationId = reservation.reservationId,
+                bookId = reservation.bookId,
+                customerName = reservation.customerName,
+                bookName =  deserialized.Where(x => x.bookId.Equals(reservation.bookId)).First().bookName,
+                reservedUntil = reservation.reservedUntil.ToString("yyyy-MM-dd:HH") // Specify your desired format here
+            })
+            .ToList();
+
+        return toReturn;
+    }
+
+    public async Task<List<RentDetails>> GetUserLeases(string name)
+    { 
+        var client = new RestClient("http://inventory-first:80");
+        var request = new RestRequest("/get-all-books");
+        var response = await client.ExecuteAsync(request);
+        var deserialized =  JsonConvert.DeserializeObject<List<Book>>(response.Content).AsQueryable();
+        var rents = await _dbContext.Rents
+            .Where(x => x.customerName.Equals(name))
+            .ToListAsync();
+
+        List<RentDetails> formattedRents = rents.Select(rent => new RentDetails()
+        {
+            leaseId = rent.leaseId,
+            bookId = rent.bookId,
+            bookName = deserialized.FirstOrDefault(x => x.bookId.Equals(rent.bookId)).bookName,
+            customerName = rent.customerName,
+            leaseStartDate = rent.leaseStartDate.ToString("yyyy-MM-dd:HH"), // Specify your desired format here
+            returnDate = rent.returnDate.ToString("yyyy-MM-dd:HH") // Specify your desired format here
+        }).ToList();
+
+        return formattedRents;
+    }
+
+    public async Task<bool> AddRentFromReservation(string id, RentFromReservation details)
+    {
+        var client = new RestClient("http://gateway:3000");
+        var client1 = new RestClient("http://inventory-first:6969");
+        var updateRequest = new RestRequest($"/updateInfo/flag={BookEdit.LeaseFromReservation}/{details.bookId}", Method.Put);
+        var reservation = _dbContext.Reservations.Where(x => x.reservationId.Equals(Guid.Parse(id))).First();
+        var returnDate = DateTime.Parse(details.returnDate).ToUniversalTime();
+        if (!reservation.Equals(null))
+        {
+            var rent = new Rent()
+            {
+                leaseId = new Guid(),
+                bookId = reservation.bookId,
+                customerName = reservation.customerName,
+                leaseStartDate = DateTime.UtcNow,
+                returnDate = returnDate
+            };
+            _dbContext.Rents.Add(rent);
+            await _dbContext.SaveChangesAsync();
+            _dbContext.Reservations.Remove(reservation);
+            await _dbContext.SaveChangesAsync();
+            var clearCache = new RestRequest("/api/clear-cache", Method.Post);
+            var res = await client1.ExecuteAsync(updateRequest);
+            var ress =await client.ExecuteAsync(clearCache);
+        }
+
+        return true;
     }
 }

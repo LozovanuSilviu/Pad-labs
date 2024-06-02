@@ -22,31 +22,33 @@ public class LeanController : ControllerBase
     [Route("lease")]
     public async Task<IActionResult> AddLean(NewRent rent)
     {
-        try
-        {
-            var addLeaseTask =Task.Run(() =>_leanService.AddRent(rent));
-            var completedTask = await Task.WhenAny(addLeaseTask, Task.Delay(TimeSpan.FromMilliseconds(4000)));
-        
-            if (completedTask == addLeaseTask)
-            {
-                // The AddBook task completed before the timeout
-                var result = await addLeaseTask;
-                requestCounts[200]++;
-                return Ok(result);
-            }
-            else
-            {
-                // The timeout task completed before the AddBook task
-                requestCounts[500]++;
-                return StatusCode(500, "Operation timed out.");
-            }
-        }
-        catch (Exception e)
-        {
-            Console.WriteLine(e);
-            requestCounts[400]++;
-            return StatusCode(400,$"{e.Message}");
-        }
+        // try
+        // {
+            // var addLeaseTask =Task.Run(() =>
+            return Ok(await _leanService.AddRent(rent));
+            // );
+            // var completedTask = await Task.WhenAny(addLeaseTask, Task.Delay(TimeSpan.FromMilliseconds(4000)));
+
+            //     if (completedTask == addLeaseTask)
+            //     {
+            //         // The AddBook task completed before the timeout
+            //         var result = await addLeaseTask;
+            //         requestCounts[200]++;
+            //         return Ok(result);
+            //     }
+            //     else
+            //     {
+            //         // The timeout task completed before the AddBook task
+            //         requestCounts[500]++;
+            //         return StatusCode(500, "Operation timed out.");
+            //     }
+            // }
+            // catch (Exception e)
+            // {
+            //     Console.WriteLine(e);
+            //     requestCounts[400]++;
+            //     return StatusCode(400,$"{e.Message}");
+            // }
     }
     
     [HttpPost]
@@ -95,7 +97,7 @@ public class LeanController : ControllerBase
     
     [HttpPost]
     [Route("close-lease")]
-    public async Task<IActionResult> CloseLease(BaseRentModel renting)
+    public async Task<IActionResult> CloseLease(CloseLeaseModel renting)
     {
         var closeLeaseTask =Task.Run(() =>_leanService.CloseLease(renting));
         var completedTask = await Task.WhenAny(closeLeaseTask, Task.Delay(TimeSpan.FromMilliseconds(4000)));
@@ -163,22 +165,33 @@ public class LeanController : ControllerBase
     [Route("all-reservations")]
     public async Task<IActionResult> GetReservations()
     {
-        var getReservationTask =Task.Run(() =>_leanService.GetReservations());
-        var completedTask = await Task.WhenAny(getReservationTask, Task.Delay(TimeSpan.FromMilliseconds(2000)));
-        
-        if (completedTask == getReservationTask)
-        {
-            // The AddBook task completed before the timeout
-            var result = await getReservationTask;
-            requestCounts[200]++;
-            return Ok(result);
-        }
-        else
-        {
-            // The timeout task completed before the AddBook task
-            requestCounts[500]++;
-            return StatusCode(500, "Operation timed out.");
-        }
+      return Ok(await _leanService.GetReservations());
+    }
+
+    [HttpGet]
+    [Route("user-reservations")]
+    public async Task<IActionResult> GetUserReservations(
+        [FromQuery] string name)
+    {
+        return Ok(await _leanService.GetUserReservations(name));
+    }
+    
+    [HttpGet]
+    [Route("user-leases")]
+    public async Task<IActionResult> GetUserLeases(
+        [FromQuery] string name)
+    {
+        return Ok(await _leanService.GetUserLeases(name));
+    }
+
+    [HttpPost]
+    [Route("rent-from-reservation")]
+    public async Task<IActionResult> AddRentFromReservation(
+        [FromQuery] string id,
+        [FromBody] RentFromReservation details)
+
+    {
+        return Ok(await _leanService.AddRentFromReservation(id, details));
     }
 
     [HttpGet]

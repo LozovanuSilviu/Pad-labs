@@ -2,6 +2,7 @@ using InventoryService.Data;
 using InventoryService.Data.Entities;
 using InventoryService.Enums;
 using InventoryService.Models;
+using Microsoft.CodeAnalysis.Operations;
 using Newtonsoft.Json;
 using RestSharp;
 
@@ -17,16 +18,39 @@ public class BookService
         _dbContext = dbContext;
         
     }
+    
 
-    public Task<List<Book>> SearchBook(string criteria)
+    public async Task<List<BookDetail>> SearchBook(string criteria)
     {
+        var cl1 = new HttpClient();
+        var req =await cl1.GetAsync( "http://identity:80/api/identity/get-libraries");
+        var respone =await  req.Content.ReadAsStringAsync();
+        var libraries = JsonConvert.DeserializeObject<List<Library>>(respone).AsQueryable();
         try
         {
             var searchCriteria = criteria.ToLower();
             var books =_dbContext.Books.Where(x => x.bookAuthor.ToLower().Contains(searchCriteria) || x.bookName.ToLower().Contains(searchCriteria))
                 .Distinct()
                 .ToList();
-            return Task.FromResult(books);
+            var booksDetails = new List<BookDetail>();
+            
+            foreach (var book in books)
+            {
+                
+                var bookDetail = new BookDetail()
+                {
+                    bookId = book.bookId,
+                    bookName = book.bookName,
+                    bookAuthor = book.bookAuthor,
+                    availableCount = book.availableCount,
+                    reservedCount = book.reservedCount,
+                    libraryId = book.libraryId,
+                    libraryName = libraries.FirstOrDefault(x => x.libraryId.Equals(book.libraryId)).name
+                };
+                booksDetails.Add(bookDetail);
+            }
+
+            return await Task.FromResult(booksDetails);
         }
         catch (Exception e)
         {
@@ -46,6 +70,7 @@ public class BookService
                  bookAuthor = newBook.BookAuthor,
                  bookName = newBook.BookName,
                  availableCount = newBook.AvailableCount,
+                 libraryId = newBook.libraryId,
                  reservedCount = 0  
              };
              _dbContext.Add(book);
@@ -61,40 +86,59 @@ public class BookService
        
      }
 
-     public async Task<List<Book>> GetAllBooks()
+     public async Task<List<BookDetail>> GetAllBooks()
      {
          var client = new RestClient("http://gateway:3000");
-         try
-         {
-             var request = new RestRequest($"/api/data?cacheKey=data", Method.Get);
+         var cl1 = new HttpClient();
+         // try
+         // {
+             var request = new RestRequest("/api/data?cacheKey=data", Method.Get);
              var response = await client.ExecuteAsync(request);
              Console.WriteLine(response.Content);
              var deserialized = JsonConvert.DeserializeObject<CacheData>(response.Content);
              if (deserialized.Data == null)
              {
+                 var req =await cl1.GetAsync( "http://identity:80/api/identity/get-libraries");
+                 var respone =await  req.Content.ReadAsStringAsync();
+                 var libraries = JsonConvert.DeserializeObject<List<Library>>(respone).AsQueryable();
                  var books = _dbContext.Books.ToList();
+                 var booksDetails = new List<BookDetail>();
+                 foreach (var book in books)
+                 {
+                     var bookDetail = new BookDetail()
+                     {
+                         bookId = book.bookId,
+                         bookName = book.bookName,
+                         bookAuthor = book.bookAuthor,
+                         availableCount = book.availableCount,
+                         reservedCount = book.reservedCount,
+                         libraryId = book.libraryId,
+                         libraryName = libraries.FirstOrDefault(x => x.libraryId.Equals(book.libraryId)).name
+                     };
+                     booksDetails.Add(bookDetail);
+                 }
+                 
+                 Console.WriteLine("========");
                  var cache = new CacheModel()
                  {
                      cacheKey = "data",
-                     data = JsonConvert.SerializeObject(books)
+                     data = JsonConvert.SerializeObject(booksDetails)
                  };
                  var saveCacheRequest = new RestRequest("/api/data", Method.Post);
                  saveCacheRequest.AddBody(JsonConvert.SerializeObject(cache));
                  await client.ExecuteAsync(saveCacheRequest);
-                 Console.WriteLine("returned data from db");
-                 return await Task.FromResult<List<Book>>(books);
+                 return await Task.FromResult<List<BookDetail>>(booksDetails);
              }
              else
              {
-                 Console.WriteLine("returned data from cache");
-                 return await Task.FromResult<List<Book>>(JsonConvert.DeserializeObject<List<Book>>(deserialized.Data));
+                 return await Task.FromResult<List<BookDetail>>(JsonConvert.DeserializeObject<List<BookDetail>>(deserialized.Data));
              }
            
-         }
-         catch (Exception e)
-         {
-             throw new Exception("No books found");
-         }
+         // }
+         // catch (Exception e)
+         // {
+         //     throw new Exception("No books found");
+         // }
          
      }
      public Task<Book> GetBookById(Guid id)
@@ -111,18 +155,21 @@ public class BookService
          
      }
 
-     public  Task<string> RemoveBook(BaseModel book)
+     public async Task<string> RemoveBook(BaseModel book)
      {
+         var client = new RestClient("http://gateway:3000");
          try
          {
              var bookToRemove = _dbContext.Books.FirstOrDefault(x => x.bookId.Equals(book.bookId));
              _dbContext.Remove(bookToRemove);
              _dbContext.SaveChanges();
-             return Task.FromResult("Successfully removed");
+             var clearCache = new RestRequest("/api/clear-cache", Method.Post);
+             await client.ExecuteAsync(clearCache);
+             return await Task.FromResult("Successfully removed");
          }
          catch (Exception e)
          {
-             return Task.FromResult("An error occurred while removing the book");
+             return await Task.FromResult("An error occurred while removing the book");
          }
      }
 
@@ -152,6 +199,11 @@ public class BookService
                  } case BookEdit.Return:
                  {
                      book.availableCount+=1;
+                     break;
+                 }
+                 case BookEdit.LeaseFromReservation:
+                 {
+                     book.reservedCount -= 1;
                      break;
                  }
              }

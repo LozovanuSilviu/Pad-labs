@@ -10,4 +10,5 @@ public class Book
     public string bookAuthor { get; set; }
     public int availableCount { get; set; }
     public int reservedCount { get; set; }
+    public Guid libraryId { get; set; }
 }
